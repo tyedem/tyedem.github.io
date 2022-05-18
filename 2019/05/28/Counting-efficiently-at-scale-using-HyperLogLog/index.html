@@ -73,33 +73,32 @@
   <div class="post-content">
     <p>Counting <strong>exactly</strong> number of distinct elements from a stream at scale is intrinsically a linear problem. From a perspective of time taken, intuition tells us that we cannot skip any elements in the stream and be confident in the accuracy of our result. With regards to space required to solve the problem, a record of previously seen elements in the stream must be kept. For a stream of <script type="math/tex">n</script> distinct elements, the <strong>COUNT-DISTINCT</strong> algorithm requires <script type="math/tex">\Theta(n)</script> space.</p>
 <p>For services counting distincts in huge streams, such as the number of IP addresses visiting <a target="_blank" rel="noopener" href="https://google.com/">Google</a>, the number of unique views of a popular Reddit post, the memory-to-utility ratio would not justify using <strong>COUNT-DISTINCT</strong>, instead developers can use an approximation algorithm of <strong>COUNT-DISTINCT</strong> to produce a estimate close enough at a fraction of the space needed. <strong>HyperLogLog</strong> is one such approximation algorithm.</p>
-<h3 id="Implementation-of-COUNT-DISTINCT"><a href="#Implementation-of-COUNT-DISTINCT" class="headerlink" title="Implementation of COUNT-DISTINCT"></a>Implementation of COUNT-DISTINCT</h3><pre><code class="lang-cpp">#include &lt;map&gt;
+<h3 id="Implementation-of-COUNT-DISTINCT"><a href="#Implementation-of-COUNT-DISTINCT" class="headerlink" title="Implementation of COUNT-DISTINCT"></a>Implementation of COUNT-DISTINCT</h3><pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;map></span></span>
 
-using namespace std;
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
 
-template &lt;class stream_type&gt;
-class COUNT_DISTINCT &#123;
-    std::map&lt;stream_type, int&gt; seen;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">class</span> <span class="token class-name">COUNT_DISTINCT</span> <span class="token punctuation">&#123;</span>
+    std<span class="token double-colon punctuation">::</span>map<span class="token operator">&lt;</span>stream_type<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">></span> seen<span class="token punctuation">;</span>
+    
+    <span class="token keyword">public</span><span class="token operator">:</span>
+        <span class="token function">COUNT_DISTINCT</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">void</span> <span class="token function">add</span><span class="token punctuation">(</span>stream_type v<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        size_t <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-    public:
-        COUNT_DISTINCT();
-        void add(stream_type v);
-        size_t count();
-&#125;
+<span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token class-name">COUNT_DISTINCT</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">COUNT_DISTINCT</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
 
-template&lt;class stream_type&gt;
-COUNT_DISTINCT&lt;stream_type&gt;::COUNT_DISTINCT() &#123;&#125;
+<span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">COUNT_DISTINCT</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">add</span><span class="token punctuation">(</span>stream_type v<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    seen<span class="token punctuation">[</span>v<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-template&lt;class stream_type&gt;
-void COUNT_DISTINCT&lt;stream_type&gt;::add(stream_type v) &#123;
-    seen[v] = 1;
-&#125;
-
-template&lt;class stream_type&gt;
-void COUNT_DISTINCT&lt;stream_type&gt;::count() &#123;
-    return seen.size();
-&#125;
-</code></pre>
+<span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">COUNT_DISTINCT</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> seen<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span></code></pre>
 <h2 id="What-is-HyperLogLog-Exactly"><a href="#What-is-HyperLogLog-Exactly" class="headerlink" title="What is HyperLogLog Exactly?"></a>What is HyperLogLog Exactly?</h2><p>HyperLogLog is many things, from the perspective of computer science, it is a:</p>
 <ul>
 <li><strong>Streaming algorithm</strong> - an algorithm operating on read-once-only stream of data.</li>
@@ -110,120 +109,118 @@ void COUNT_DISTINCT&lt;stream_type&gt;::count() &#123;
 <p>The main principle behind HyperLogLog is understanding the effect of random hashing a stream of values. Given a hash function <script type="math/tex">hash(x): D \rightarrow \{0,1\}^L</script> mapping the stream domain to a string of <script type="math/tex">L</script> bits uniformly, with every bit being a independent and identically distributed random variable. Hashing to random will create a new probability distribution which is indicative of the distinct count.</p>
 <p>If we <script type="math/tex">hash</script> a stream of random integers between <script type="math/tex">[0, 10^9]</script>, it is expected that 50% of hashed elements in the stream start with bit pattern <script type="math/tex">1</script>, 25% of the hashed elements start with <script type="math/tex">01</script>, 12.5% start with <script type="math/tex">001</script>, 6.25% start with <script type="math/tex">0001</script>. Intuitively it makes sense that seeing the bit pattern <script type="math/tex">0^\rho1</script> means <script type="math/tex">n</script> is at least <script type="math/tex">2^{\rho}</script>.</p>
 <p>A simple version of HyperLogLog keeps track of the random variable <script type="math/tex">r = \max({msb(hash(x_i)) : \forall i \in S})</script> over the stream <script type="math/tex">S</script>, where <script type="math/tex">msb</script> is the index of the first non-zero most significant bit, i.e <script type="math/tex">msb(0001_2) = 3</script>, <script type="math/tex">msb(1000_2) = 0</script>, <script type="math/tex">msb(0100_2) = 1</script> and <script type="math/tex">msb(0000_2) = 4</script> over 4-bit inputs. The value of <script type="math/tex">2^{r}</script> is returned, with <script type="math/tex">r = -\infty</script> when the stream is empty.</p>
-<h2 id="A-simple-but-naive-version-of-HyperLogLog"><a href="#A-simple-but-naive-version-of-HyperLogLog" class="headerlink" title="A simple, but naive version of HyperLogLog"></a>A simple, but naive version of HyperLogLog</h2><pre><code class="lang-cpp">#include &lt;cmath&gt;
-#include &lt;functional&gt;
+<h2 id="A-simple-but-naive-version-of-HyperLogLog"><a href="#A-simple-but-naive-version-of-HyperLogLog" class="headerlink" title="A simple, but naive version of HyperLogLog"></a>A simple, but naive version of HyperLogLog</h2><pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;cmath></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;functional></span></span>
 
-unsigned int msb_index(size_t i) &#123;
-    // return the index of the left most significant bit of input i
-    if (i == 0) return sizeof(size_t) * 8;
-    unsigned int n = 0;
-    size_t nth_msb_bitmask = ((size_t) 1) &lt;&lt; (sizeof(size_t) * 8 - 1);
-    while((i &amp; nth_msb_bitmask) == 0 &amp;&amp; n &lt; sizeof(size_t) * 8) &#123;
-        n++;
-        nth_msb_bitmask = ((size_t) 1) &lt;&lt; (sizeof(size_t) * 8 - 1 - n);
-    &#125;
-    return n;
-&#125;
+<span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">msb_index</span><span class="token punctuation">(</span>size_t i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// return the index of the left most significant bit of input i</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span><span class="token punctuation">;</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    size_t nth_msb_bitmask <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token punctuation">(</span>i <span class="token operator">&amp;</span> nth_msb_bitmask<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> n <span class="token operator">&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        n<span class="token operator">++</span><span class="token punctuation">;</span>
+        nth_msb_bitmask <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span> <span class="token operator">-</span> <span class="token number">1</span> <span class="token operator">-</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> n<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
 
-template &lt;class stream_type&gt;
-class HyperLogLog &#123;
-    size_t r;
-    std::hash&lt;stream_type&gt; hash_func;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">class</span> <span class="token class-name">HyperLogLog</span> <span class="token punctuation">&#123;</span>
+    size_t r<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>hash<span class="token operator">&lt;</span>stream_type<span class="token operator">></span> hash_func<span class="token punctuation">;</span>
 
-    public:
-    HyperLogLog();
-    void add(stream_type v);
-    double estimate();
+    <span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token function">HyperLogLog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">add</span><span class="token punctuation">(</span>stream_type v<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">double</span> <span class="token function">estimate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-&#125;;
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
 
-template &lt;class stream_type&gt;
-HyperLogLog&lt;stream_type&gt;::HyperLogLog(), hash_func()  &#123;
-    r = 0;
-&#125;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token class-name">HyperLogLog</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">HyperLogLog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">hash_func</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token punctuation">&#123;</span>
+    r <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-template &lt;class stream_type&gt;
-void HyperLogLog&lt;stream_type&gt;::add(stream_type v) &#123;
-    size_t hv = hash_func(v);
-    r = std::max(r, msb_index(hv));
-&#125;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">HyperLogLog</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">add</span><span class="token punctuation">(</span>stream_type v<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    size_t hv <span class="token operator">=</span> <span class="token function">hash_func</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    r <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">max</span><span class="token punctuation">(</span>r<span class="token punctuation">,</span> <span class="token function">msb_index</span><span class="token punctuation">(</span>hv<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-template &lt;class stream_type&gt;
-double HyperLogLog&lt;stream_type&gt;::estimate() &#123;
-    return pow(2, r);
-&#125;
-</code></pre>
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">double</span> <span class="token class-name">HyperLogLog</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">estimate</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token function">pow</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> r<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span></code></pre>
 <p>The above algorithm is almost identical to a precursor of the HyperLogLog algorithm, the <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Flajolet%E2%80%93Martin_algorithm">Flajolet–Martin algorithm</a>. The above algorithm has a flaw in that it has large variance, if for example the stream contains an element <script type="math/tex">x</script> for which <script type="math/tex">hash(x) = 0</script>, then regardless of the number of distinct elements, the result would be <script type="math/tex">2^L</script>. </p>
 <p>To reduce the flaw, we can partition a stream <script type="math/tex">S</script> into <script type="math/tex">M</script> substreams, where <script type="math/tex">M < S</script>, compute <script type="math/tex">r_i</script>  for each substream <script type="math/tex">i \in \{1, \ldots, M\}</script> and average the estimates given by each stream. A simple method to partition the stream is by sorting hashes of elements by their first <script type="math/tex">b</script> bits. </p>
 <p>Implementing this gets closer to HyperLogLog.</p>
-<h2 id="Implementation-of-HyperLogLog"><a href="#Implementation-of-HyperLogLog" class="headerlink" title="Implementation of HyperLogLog"></a>Implementation of HyperLogLog</h2><pre><code class="lang-cpp">#include &lt;iostream&gt;
-#include &lt;string&gt;
-#include &lt;vector&gt;
-#include &lt;cmath&gt;
-#include &lt;functional&gt;
-#include &lt;algorithm&gt;
+<h2 id="Implementation-of-HyperLogLog"><a href="#Implementation-of-HyperLogLog" class="headerlink" title="Implementation of HyperLogLog"></a>Implementation of HyperLogLog</h2><pre class="language-cpp" data-language="cpp"><code class="language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;string></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;vector></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;cmath></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;functional></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;algorithm></span></span>
 
-unsigned int msb_index(size_t i) &#123;
-    // return the index of the left most significant bit of input i
-    if (i == 0) return sizeof(size_t) * 8;
-    unsigned int n = 0;
-    size_t nth_msb_bitmask = ((size_t) 1) &lt;&lt; (sizeof(size_t) * 8 - 1);
-    while((i &amp; nth_msb_bitmask) == 0 &amp;&amp; n &lt; sizeof(size_t) * 8) &#123;
-        n++;
-        nth_msb_bitmask = ((size_t) 1) &lt;&lt; (sizeof(size_t) * 8 - 1 - n);
-    &#125;
-    return n;
-&#125;
+<span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">msb_index</span><span class="token punctuation">(</span>size_t i<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// return the index of the left most significant bit of input i</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span><span class="token punctuation">;</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    size_t nth_msb_bitmask <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token punctuation">(</span>i <span class="token operator">&amp;</span> nth_msb_bitmask<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> n <span class="token operator">&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        n<span class="token operator">++</span><span class="token punctuation">;</span>
+        nth_msb_bitmask <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span> <span class="token operator">-</span> <span class="token number">1</span> <span class="token operator">-</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> n<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
 
-template &lt;class stream_type&gt;
-class HyperLogLog &#123;
-    unsigned int b; // partition into 2^b substreams
-    unsigned int m; // m substreams
-    unsigned int* registers;
-    std::hash&lt;stream_type&gt; hash_func;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">class</span> <span class="token class-name">HyperLogLog</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">int</span> b<span class="token punctuation">;</span> <span class="token comment">// partition into 2^b substreams</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">int</span> m<span class="token punctuation">;</span> <span class="token comment">// m substreams</span>
+    <span class="token keyword">unsigned</span> <span class="token keyword">int</span><span class="token operator">*</span> registers<span class="token punctuation">;</span>
+    std<span class="token double-colon punctuation">::</span>hash<span class="token operator">&lt;</span>stream_type<span class="token operator">></span> hash_func<span class="token punctuation">;</span>
 
-    public:
-    HyperLogLog(int b);
-    ~HyperLogLog() &#123;&#125;
+    <span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token function">HyperLogLog</span><span class="token punctuation">(</span><span class="token keyword">int</span> b<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token operator">~</span><span class="token function">HyperLogLog</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
 
-    void add(stream_type v);
-    double estimate();
+    <span class="token keyword">void</span> <span class="token function">add</span><span class="token punctuation">(</span>stream_type v<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">double</span> <span class="token function">estimate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-&#125;;
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
 
-template &lt;class stream_type&gt;
-HyperLogLog&lt;stream_type&gt;::HyperLogLog(unsigned int b): b(b), hash_func()  &#123;
-    m = 1 &lt;&lt; b; 
-    registers = new unsigned int[m]();
-&#125;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token class-name">HyperLogLog</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">HyperLogLog</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> b<span class="token punctuation">)</span><span class="token operator">:</span> <span class="token function">b</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">hash_func</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token punctuation">&#123;</span>
+    m <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">&lt;&lt;</span> b<span class="token punctuation">;</span> 
+    registers <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">unsigned</span> <span class="token keyword">int</span><span class="token punctuation">[</span>m<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-template &lt;class stream_type&gt;
-HyperLogLog&lt;stream_type&gt;::~HyperLogLog() &#123;
-    delete[] registers;
-&#125;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+HyperLogLog<span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token operator">~</span><span class="token function">HyperLogLog</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">delete</span><span class="token punctuation">[</span><span class="token punctuation">]</span> registers<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-template &lt;class stream_type&gt;
-void HyperLogLog&lt;stream_type&gt;::add(stream_type v) &#123;
-    size_t hv = hash_func(v);
-    size_t j = hv &gt;&gt; (sizeof(size_t) * 8 - b);
-    size_t w = hv &amp; ((1 &lt;&lt; sizeof(size_t) * 8 - b) - 1);
-    registers[j] = std::max(registers[j], msb_index(w));
-&#125;
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">void</span> <span class="token class-name">HyperLogLog</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">add</span><span class="token punctuation">(</span>stream_type v<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    size_t hv <span class="token operator">=</span> <span class="token function">hash_func</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    size_t j <span class="token operator">=</span> hv <span class="token operator">>></span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span> <span class="token operator">-</span> b<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    size_t w <span class="token operator">=</span> hv <span class="token operator">&amp;</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span> <span class="token operator">-</span> b<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    registers<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> std<span class="token double-colon punctuation">::</span><span class="token function">max</span><span class="token punctuation">(</span>registers<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token function">msb_index</span><span class="token punctuation">(</span>w<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
 
-template &lt;class stream_type&gt;
-double HyperLogLog&lt;stream_type&gt;::estimate() &#123;
-    // return the harmonic mean (reciprocals of the mean of the reciprocals) of 2^&#123;register[i]&#125;
-    double harmonic_mean = 0;
-    for (int i=0; i &lt; m; i++) &#123;
-        harmonic_mean += pow(2.0, -registers[i]);
-    &#125;
-    harmonic_mean = pow(harmonic_mean, -1.0) * m;
-    // harmonic mean computed
-    return harmonic_mean * m;
-&#125;
-</code></pre>
+<span class="token keyword">template</span> <span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">stream_type</span><span class="token operator">></span>
+<span class="token keyword">double</span> <span class="token class-name">HyperLogLog</span><span class="token operator">&lt;</span>stream_type<span class="token operator">></span><span class="token double-colon punctuation">::</span><span class="token function">estimate</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// return the harmonic mean (reciprocals of the mean of the reciprocals) of 2^&#123;register[i]&#125;</span>
+    <span class="token keyword">double</span> harmonic_mean <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> m<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        harmonic_mean <span class="token operator">+=</span> <span class="token function">pow</span><span class="token punctuation">(</span><span class="token number">2.0</span><span class="token punctuation">,</span> <span class="token operator">-</span>registers<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    harmonic_mean <span class="token operator">=</span> <span class="token function">pow</span><span class="token punctuation">(</span>harmonic_mean<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1.0</span><span class="token punctuation">)</span> <span class="token operator">*</span> m<span class="token punctuation">;</span>
+    <span class="token comment">// harmonic mean computed</span>
+    <span class="token keyword">return</span> harmonic_mean <span class="token operator">*</span> m<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span></code></pre>
 <p>The intuition behind this algorithm, as written by Flajolet et. al is: </p>
 <blockquote>
 <p>Let <script type="math/tex">n</script> be the unknown cardinality of stream <script type="math/tex">S</script>. Each substream will comprise approximately <script type="math/tex">n/m</script> elements. Then, its max-parameter should be close to <script type="math/tex">\log_2(n/m)</script>. The harmonic mean <script type="math/tex">k</script>  of the quantities <script type="math/tex">2^{Max}</script> is then likely to be of the order of <script type="math/tex">n/m</script>. Thus, <script type="math/tex">mk</script> should be of the order of <script type="math/tex">n</script>. </p>
